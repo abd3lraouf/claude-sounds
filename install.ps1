@@ -204,7 +204,10 @@ function Install-Profile {
     
     Write-Info "Merging hooks into settings.json..."
     
-    $hooks = @{
+    # Define new hooks with profile pattern for deduplication
+    $profilePattern = "${ProfileName}_(session|prompt|stop|compact)\.ps1$"
+    
+    $newHooks = @{
         SessionStart = @(@{
             matcher = "startup|clear"
             hooks = @(@{
@@ -233,11 +236,40 @@ function Install-Profile {
     }
     
     if (-not $settings.hooks) {
-        $settings | Add-Member -NotePropertyName "hooks" -NotePropertyValue $hooks -Force
-    } else {
-        foreach ($key in $hooks.Keys) {
-            if (-not $settings.hooks.$key) {
-                $settings.hooks | Add-Member -NotePropertyName $key -NotePropertyValue $hooks[$key] -Force
+        $settings | Add-Member -NotePropertyName "hooks" -NotePropertyValue @{} -Force
+    }
+    
+    foreach ($key in $newHooks.Keys) {
+        if (-not $settings.hooks.$key) {
+            $settings.hooks | Add-Member -NotePropertyName $key -NotePropertyValue $newHooks[$key] -Force
+        } else {
+            # Check for existing hooks with same profile to prevent duplicates
+            $existingHooks = $settings.hooks.$key
+            $newCmd = $newHooks[$key][0].hooks[0].command
+            
+            # Normalize the new command path for comparison
+            $newCmdNormalized = $newCmd -replace '\\+', '\'
+            
+            $alreadyExists = $false
+            foreach ($item in $existingHooks) {
+                if ($item.hooks) {
+                    foreach ($h in $item.hooks) {
+                        if ($h.command) {
+                            $existingCmdNormalized = $h.command -replace '\\+', '\'
+                            if ($existingCmdNormalized -eq $newCmdNormalized -or 
+                                $h.command -match $profilePattern) {
+                                $alreadyExists = $true
+                                break
+                            }
+                        }
+                    }
+                }
+                if ($alreadyExists) { break }
+            }
+            
+            if (-not $alreadyExists) {
+                $existingHooks += $newHooks[$key]
+                $settings.hooks.$key = $existingHooks
             }
         }
     }
