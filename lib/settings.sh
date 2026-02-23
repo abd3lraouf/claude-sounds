@@ -63,6 +63,16 @@ new_hooks = {
         }
       ]
     }
+  ],
+  "PostToolUseFailure": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "~/.claude/scripts/${profile}_failure.sh"
+        }
+      ]
+    }
   ]
 }
 
@@ -129,7 +139,7 @@ with open(settings_file, 'r') as f:
 if 'hooks' not in data:
     exit(0)
 
-profile_pattern = re.compile(r'${profile}_(session|prompt|stop|compact)\.sh')
+profile_pattern = re.compile(r'${profile}_(session|prompt|stop|compact|failure)\.sh')
 
 for event in list(data['hooks'].keys()):
     if isinstance(data['hooks'][event], list):

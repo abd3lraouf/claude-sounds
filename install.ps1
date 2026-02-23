@@ -175,15 +175,19 @@ function Install-Profile {
         exit 1
     }
     
-    # Get sounds for each hook
+    # Get sounds for each hook by category (based on filename patterns)
     $allSounds = Get-ChildItem $profileDir -Filter "*.ogg" | Sort-Object Name | Select-Object -ExpandProperty Name
     $allSounds += Get-ChildItem $profileDir -Filter "*.mp3" | Sort-Object Name | Select-Object -ExpandProperty Name
     $allSounds += Get-ChildItem $profileDir -Filter "*.wav" | Sort-Object Name | Select-Object -ExpandProperty Name
     
-    $sessionSounds = $allSounds | Select-Object -First 6
-    $promptSounds = $allSounds | Select-Object -Skip 6 -First 6
-    $stopSounds = $allSounds | Select-Object -Skip 12 -First 6
-    $compactSounds = $allSounds | Select-Object -Skip 18
+    # Affirmative sounds (positive events)
+    $sessionSounds = $allSounds | Where-Object { $_ -match "^0[1-3]_" }
+    $promptSounds = $allSounds | Where-Object { $_ -match "^0[4-8]_" }
+    $stopSounds = $allSounds | Where-Object { $_ -match "^(09|1[1-6])_" }
+    
+    # Negative sounds (failure/cancellation events)
+    $failureSounds = $allSounds | Where-Object { $_ -match "^(10|17|19|21)_" }
+    $compactSounds = $allSounds | Where-Object { $_ -match "^(10|17|18|19|21)_" }
     
     # Generate hook scripts
     Write-Info "Generating hook scripts..."
@@ -192,6 +196,7 @@ function Install-Profile {
     New-HookScript -ProfileName $ProfileName -HookType "prompt" -SoundsDir $profileDir -OutputPath (Join-Path $scriptsDir "${ProfileName}_prompt.ps1") -Sounds $promptSounds
     New-HookScript -ProfileName $ProfileName -HookType "stop" -SoundsDir $profileDir -OutputPath (Join-Path $scriptsDir "${ProfileName}_stop.ps1") -Sounds $stopSounds
     New-HookScript -ProfileName $ProfileName -HookType "compact" -SoundsDir $profileDir -OutputPath (Join-Path $scriptsDir "${ProfileName}_compact.ps1") -Sounds $compactSounds
+    New-HookScript -ProfileName $ProfileName -HookType "failure" -SoundsDir $profileDir -OutputPath (Join-Path $scriptsDir "${ProfileName}_failure.ps1") -Sounds $failureSounds
     
     # Backup and update settings
     if (Test-Path $settingsFile) {
@@ -205,7 +210,7 @@ function Install-Profile {
     Write-Info "Merging hooks into settings.json..."
     
     # Define new hooks with profile pattern for deduplication
-    $profilePattern = "${ProfileName}_(session|prompt|stop|compact)\.ps1$"
+    $profilePattern = "${ProfileName}_(session|prompt|stop|compact|failure)\.ps1$"
     
     $newHooks = @{
         SessionStart = @(@{
@@ -231,6 +236,12 @@ function Install-Profile {
             hooks = @(@{
                 type = "command"
                 command = "powershell -ExecutionPolicy Bypass -File `"$scriptsDir\${ProfileName}_compact.ps1`""
+            })
+        })
+        PostToolUseFailure = @(@{
+            hooks = @(@{
+                type = "command"
+                command = "powershell -ExecutionPolicy Bypass -File `"$scriptsDir\${ProfileName}_failure.ps1`""
             })
         })
     }

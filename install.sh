@@ -96,12 +96,17 @@ install_profile() {
   
   info "Generating hook scripts..."
   
-  local sounds_session=$(find "$profile_dir" -name "*.ogg" -o -name "*.mp3" -o -name "*.wav" | sort | head -6 | xargs -I{} basename {})
-  local sounds_prompt=$(find "$profile_dir" -name "*.ogg" -o -name "*.mp3" -o -name "*.wav" | sort | tail -n +7 | head -6 | xargs -I{} basename {})
-  local sounds_stop=$(find "$profile_dir" -name "*.ogg" -o -name "*.mp3" -o -name "*.wav" | sort | tail -n +13 | head -6 | xargs -I{} basename {})
-  local sounds_compact=$(find "$profile_dir" -name "*.ogg" -o -name "*.mp3" -o -name "*.wav" | sort | tail -n +19 | xargs -I{} basename {})
+  # Categorize sounds by their filename patterns
+  # Affirmative sounds (positive events)
+  local sounds_session=$(ls "$profile_dir" | grep -E "^0[1-3]_" | sort)
+  local sounds_prompt=$(ls "$profile_dir" | grep -E "^0[4-8]_" | sort)
+  local sounds_stop=$(ls "$profile_dir" | grep -E "^(09|1[1-6])_" | sort)
   
-  for hook in session prompt stop compact; do
+  # Negative sounds (failure/cancellation events)
+  local sounds_failure=$(ls "$profile_dir" | grep -E "^(10|17|19|21)_" | sort)
+  local sounds_compact=$(ls "$profile_dir" | grep -E "^(10|17|18|19|21)_" | sort)
+  
+  for hook in session prompt stop compact failure; do
     local sounds_var="sounds_$hook"
     local sounds="${!sounds_var}"
     
@@ -137,7 +142,7 @@ with open('$hook_script', 'w') as f:
     chmod +x "$hook_script"
   done
   
-  success "Generated 4 hook scripts"
+  success "Generated 5 hook scripts"
   
   cp "$REPO_DIR/scripts/profile-manager.sh" "$scripts_dir/profile-manager.sh" 2>/dev/null || true
   chmod +x "$scripts_dir/profile-manager.sh" 2>/dev/null || true

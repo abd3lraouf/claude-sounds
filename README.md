@@ -40,12 +40,13 @@ cd claude-sounds; .\install.ps1
 
 ## 🔊 Hook Events
 
-| Event | When | Bowman Says |
-|-------|------|-------------|
-| `SessionStart` | New session | *"Abbas!"*, *"We are at your service"* |
-| `UserPromptSubmit` | Send prompt | *"As you wish"*, *"Let's go"* |
-| `Stop` | Task done | *"Shoot!"*, *"We hunt!"* |
-| `PreCompact` | Compact | *"Impossible!"* |
+| Event | When | Type | Bowman Says |
+|-------|------|------|-------------|
+| `SessionStart` | New session | ✅ Affirmative | *"Abbas!"*, *"We are at your service"* |
+| `UserPromptSubmit` | Send prompt | ✅ Affirmative | *"As you wish"*, *"Let's go"*, *"For your victory!"* |
+| `Stop` | Task done | ✅ Affirmative | *"Shoot!"*, *"We hunt!"*, *"Hit the target!"* |
+| `PreCompact` | Context compact | ❌ Negative | *"Impossible!"*, *"A long way!"* |
+| `PostToolUseFailure` | Tool error | ❌ Negative | *"Impossible!"*, *"No, I won't do this"* |
 
 ## 🗑️ Uninstall
 
