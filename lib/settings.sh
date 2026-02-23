@@ -7,33 +7,29 @@ merge_hooks() {
   local profile="$2"
   local scripts_dir="$3"
   
-  local temp_file=$(mktemp)
-  
   if [ ! -f "$settings_file" ]; then
     echo '{}' > "$settings_file"
   fi
   
-  local existing_hooks=$(cat "$settings_file" | python3 -c '
-import json, sys
-data = json.load(sys.stdin)
-hooks = data.get("hooks", {})
-print(json.dumps(hooks))
-' 2>/dev/null)
-  
-  if [ $? -ne 0 ]; then
-    warn "Could not parse existing settings.json, creating new hooks section"
-    existing_hooks="{}"
-  fi
-  
-  local new_hooks=$(cat <<EOF
-{
+  python3 << EOF
+import json
+import os
+import re
+
+settings_file = "$settings_file"
+profile = "$profile"
+
+with open(settings_file, 'r') as f:
+    data = json.load(f)
+
+new_hooks = {
   "SessionStart": [
     {
       "matcher": "startup|clear",
       "hooks": [
         {
           "type": "command",
-          "command": "$scripts_dir/${profile}_session.sh"
+          "command": "~/.claude/scripts/${profile}_session.sh"
         }
       ]
     }
@@ -43,7 +39,7 @@ print(json.dumps(hooks))
       "hooks": [
         {
           "type": "command",
-          "command": "$scripts_dir/${profile}_prompt.sh"
+          "command": "~/.claude/scripts/${profile}_prompt.sh"
         }
       ]
     }
@@ -53,7 +49,7 @@ print(json.dumps(hooks))
       "hooks": [
         {
           "type": "command",
-          "command": "$scripts_dir/${profile}_stop.sh"
+          "command": "~/.claude/scripts/${profile}_stop.sh"
         }
       ]
     }
@@ -63,22 +59,18 @@ print(json.dumps(hooks))
       "hooks": [
         {
           "type": "command",
-          "command": "$scripts_dir/${profile}_compact.sh"
+          "command": "~/.claude/scripts/${profile}_compact.sh"
         }
       ]
     }
   ]
 }
-EOF
-)
-  
-  python3 -c "
-import json, sys
 
-with open('$settings_file', 'r') as f:
-    data = json.load(f)
-
-new_hooks = $new_hooks
+def normalize_path(cmd):
+    if cmd:
+        home = os.path.expanduser('~')
+        return cmd.replace(home, '~').replace('~/', '~/', 1)
+    return cmd
 
 if 'hooks' not in data:
     data['hooks'] = {}
@@ -91,28 +83,29 @@ for event, hooks_list in new_hooks.items():
         if isinstance(existing, list):
             for new_item in hooks_list:
                 if isinstance(new_item, dict) and 'hooks' in new_item:
-                    cmd = new_item['hooks'][0]['command'] if new_item['hooks'] else None
-                    exists = False
+                    new_cmd = new_item['hooks'][0].get('command') if new_item['hooks'] else None
+                    new_cmd_norm = normalize_path(new_cmd)
+                    
+                    already_exists = False
                     for ex_item in existing:
                         if isinstance(ex_item, dict) and 'hooks' in ex_item:
                             for h in ex_item['hooks']:
-                                if h.get('command') == cmd:
-                                    exists = True
-                                    break
-                    if not exists:
+                                if isinstance(h, dict) and 'command' in h:
+                                    existing_cmd_norm = normalize_path(h.get('command'))
+                                    if existing_cmd_norm == new_cmd_norm:
+                                        already_exists = True
+                                        break
+                            if already_exists:
+                                break
+                    
+                    if not already_exists:
                         existing.append(new_item)
 
-with open('$settings_file', 'w') as f:
+with open(settings_file, 'w') as f:
     json.dump(data, f, indent=2)
-" 2>/dev/null
+EOF
   
-  if [ $? -ne 0 ]; then
-    rm -f "$temp_file"
-    return 1
-  fi
-  
-  rm -f "$temp_file"
-  return 0
+  return $?
 }
 
 remove_hooks() {
@@ -123,16 +116,20 @@ remove_hooks() {
     return 0
   fi
   
-  python3 -c "
-import json, re
+  python3 << EOF
+import json
+import re
 
-with open('$settings_file', 'r') as f:
+settings_file = "$settings_file"
+profile = "$profile"
+
+with open(settings_file, 'r') as f:
     data = json.load(f)
 
 if 'hooks' not in data:
     exit(0)
 
-profile_pattern = re.compile(r'${profile}_(session|prompt|stop|compact)\.sh$')
+profile_pattern = re.compile(r'${profile}_(session|prompt|stop|compact)\.sh')
 
 for event in list(data['hooks'].keys()):
     if isinstance(data['hooks'][event], list):
@@ -153,12 +150,17 @@ for event in list(data['hooks'].keys()):
                 new_hooks.append(item)
         data['hooks'][event] = new_hooks
 
-if all(not v for v in data['hooks'].values()):
+# Remove empty hook lists
+for event in list(data['hooks'].keys()):
+    if not data['hooks'][event]:
+        del data['hooks'][event]
+
+if not data['hooks']:
     del data['hooks']
 
-with open('$settings_file', 'w') as f:
+with open(settings_file, 'w') as f:
     json.dump(data, f, indent=2)
-" 2>/dev/null
+EOF
   
   return $?
 }
