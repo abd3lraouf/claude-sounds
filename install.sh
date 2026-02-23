@@ -116,12 +116,23 @@ install_profile() {
       sounds_array="  \"$(ls "$profile_dir" | head -1)\"\n"
     fi
     
-    cat "$REPO_DIR/scripts/hook.sh" | \
-      sed "s|__PROFILE__|$profile|g" | \
-      sed "s|__HOOK__|$hook|g" | \
-      sed "s|__SOUNDS_DIR__|$profile_dir|g" | \
-      sed "s|__PLAY_CMD__|$play_cmd|g" | \
-      sed "/__SOUNDS__/c\\$sounds_array" > "$hook_script"
+    python3 -c "
+import re
+with open('$REPO_DIR/scripts/hook.sh', 'r') as f:
+    content = f.read()
+
+content = content.replace('__PROFILE__', '$profile')
+content = content.replace('__HOOK__', '$hook')
+content = content.replace('__SOUNDS_DIR__', '$profile_dir')
+content = content.replace('__PLAY_CMD__', '''$play_cmd''')
+
+sounds = '''$sounds_array'''
+sounds = sounds.rstrip('\\n')
+content = re.sub(r'__SOUNDS__', sounds.rstrip(), content)
+
+with open('$hook_script', 'w') as f:
+    f.write(content)
+"
     
     chmod +x "$hook_script"
   done
