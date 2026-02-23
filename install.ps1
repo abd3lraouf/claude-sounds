@@ -254,23 +254,32 @@ function Install-Profile {
         Copy-Item $pmSource (Join-Path $scriptsDir "profile-manager.ps1") -Force
     }
     
-    Write-Host "`n==========================================" -ForegroundColor Green
+    Write-Host "`n  ═════════════════════════════════════════════" -ForegroundColor Green
     Write-Success "Installation complete!"
-    Write-Host "==========================================`n"
-    Write-Host "Profile:        $ProfileName"
-    Write-Host "Sounds:         $soundCount files"
-    Write-Host "Location:       $profileDir"
-    Write-Host "Scripts:        $scriptsDir\${ProfileName}_*.ps1`n"
-    Write-Host "Restart Claude Code to activate the sounds!"
+    Write-Host "  ═════════════════════════════════════════════`n"
+    Write-Host "  🏰 Profile:     $ProfileName"
+    Write-Host "  📦 Sounds:      $soundCount files"
+    Write-Host "  📁 Location:    $profileDir"
+    Write-Host "  📜 Scripts:     $scriptsDir\${ProfileName}_*.ps1`n"
+    Write-Host "  ⚔️  Restart Claude Code to activate!  ⚔️`n"
 }
 
 # Main
 if ($Help) { Show-Usage; exit 0 }
 if ($List) { Show-Profiles; exit 0 }
 
-Write-Host "`n==========================================" -ForegroundColor Cyan
-Write-Host "  Claude Code Sound Effects Installer  " -ForegroundColor Cyan
-Write-Host "==========================================`n"
+Write-Host ""
+Write-Host "    ░██████╗░███╗░░██╗░█████╗░░█████╗░██╗░░██╗" -ForegroundColor Cyan
+Write-Host "    ██╔════╝░████╗░██║██╔══██╗██╔══██╗██║░░██║" -ForegroundColor Cyan
+Write-Host "    ██║░░██╗░██╔██╗██║██║░░██║██║░░╚═╝███████║" -ForegroundColor Cyan
+Write-Host "    ██║░░╚██╗██║╚████║██║░░██║██║░░██╗██╔══██║" -ForegroundColor Cyan
+Write-Host "    ╚██████╔╝██║░╚███║╚█████╔╝╚█████╔╝██║░░██║" -ForegroundColor Cyan
+Write-Host "    ░╚═════╝░╚═╝░░╚══╝░╚════╝░░╚════╝░╚═╝░░╚═╝" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "    ⚔️  CLAUDE CODE SOUND EFFECTS INSTALLER  ⚔️" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "           `"For your victory!`"" -ForegroundColor DarkYellow
+Write-Host ""
 
 Write-Info "Detected OS: Windows"
 Write-Info "Target directory: $(Get-ClaudeDir)`n"
